@@ -29,4 +29,25 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class);
+    }
+
+    public function hasRole(string $name): bool
+    {
+        return $this->roles->contains('name', $name);
+    }
+
+    public function formations()
+    {
+        return $this->belongsToMany(Formation::class, 'inscriptions')
+            ->withPivot('statut', 'date_inscription');
+    }
+
+    public function formationsEnseignees()
+    {
+        return $this->hasMany(Formation::class, 'formateur_id');
+    }
 }
