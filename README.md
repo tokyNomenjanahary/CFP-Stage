@@ -1,58 +1,291 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Centre de Formation Professionnelle — API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST développée avec **Laravel 13**, permettant de centraliser des centres de formation professionnelle : gestion des comptes à rôles cumulables (apprenant / formateur), catalogue de formations, inscriptions, et génération de certificats numériques vérifiables publiquement.
 
-## About Laravel
+Ce projet a été réalisé dans le cadre d'un test technique de sélection de stagiaires Master 2.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Sommaire
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- [Stack technique](#stack-technique)
+- [Choix d'architecture](#choix-darchitecture)
+- [Schéma de données](#schéma-de-données)
+- [Installation et lancement](#installation-et-lancement)
+- [Endpoints de l'API](#endpoints-de-lapi)
+- [Hypothèses prises sur les zones ambiguës](#hypothèses-prises-sur-les-zones-ambiguës)
+- [Limites connues](#limites-connues)
+- [Tests](#tests)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Stack technique
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Composant            | Choix                   | Justification                                                                                                                       |
+| -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Framework            | Laravel 13              | Framework PHP robuste, écosystème complet (Eloquent ORM, Sanctum, validation intégrée), rapide à mettre en place pour une API REST. |
+| Base de données      | SQLite                  | Zéro configuration, fichier unique, largement suffisant pour le périmètre du test (pas besoin de MySQL/PostgreSQL en local).        |
+| Authentification     | Laravel Sanctum         | Solution officielle Laravel pour l'authentification API par token, plus légère qu'OAuth2 (Passport) pour ce périmètre.              |
+| Génération de schéma | Laravel Shift Blueprint | Génère migrations, modèles et factories à partir d'un fichier YAML, accélère la mise en place initiale du schéma.                   |
+| Identifiants publics | UUID (`Str::uuid()`)    | Utilisés pour les certificats, afin d'éviter que leur identifiant soit devinable via un simple id auto-incrémenté.                  |
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## Choix d'architecture
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Rôles cumulables sans héritage
 
-```bash
-composer require laravel/boost --dev
+Le sujet interdit explicitement de modéliser les rôles avec de l'héritage de classes/tables, ou avec un simple champ `type_utilisateur` unique — cette dernière approche empêcherait un compte de cumuler plusieurs rôles.
 
-php artisan boost:install
+**Solution retenue : relation many-to-many (composition)**
+
+```
+users ⇄ role_user ⇄ roles
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Une table pivot `role_user` relie `users` et `roles`. Un utilisateur peut ainsi avoir 0, 1 ou plusieurs rôles simultanément (ex: apprenant **et** formateur), sans dupliquer sa structure de compte ni utiliser d'héritage.
 
-## Contributing
+```php
+// app/Models/User.php
+public function roles()
+{
+    return $this->belongsToMany(Role::class);
+}
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+public function hasRole(string $name): bool
+{
+    return $this->roles->contains('name', $name);
+}
+```
 
-## Code of Conduct
+### Certificats vérifiables publiquement
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Chaque certificat possède :
 
-## Security Vulnerabilities
+- Un `id` interne auto-incrémenté (clé primaire, utilisé uniquement pour les relations en base, jamais exposé).
+- Un `uuid` public, généré automatiquement à la création (`Str::uuid()`), utilisé exclusivement dans l'URL de vérification.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Cette séparation évite qu'un tiers puisse deviner ou énumérer les certificats existants en parcourant des identifiants séquentiels (`/verify/1`, `/verify/2`, ...).
 
-## License
+La route `GET /api/cfp/verify/{uuid}` est volontairement placée **en dehors** du groupe de middleware `auth:sanctum`, afin d'être accessible sans authentification — un tiers externe (employeur, autre centre) doit pouvoir vérifier un certificat sans posséder de compte sur la plateforme.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Séparation public / privé
+
+| Type de donnée                                     | Accès                                            |
+| -------------------------------------------------- | ------------------------------------------------ |
+| Catalogue de formations (liste + détail)           | Public                                           |
+| Vérification de certificat                         | Public                                           |
+| Création / modification / suppression de formation | Authentifié (formateur, propriétaire uniquement) |
+| Inscription à une formation                        | Authentifié (apprenant)                          |
+| Mes formations / mes inscriptions                  | Authentifié (rôle correspondant)                 |
+
+### Écrans différenciés selon le rôle
+
+Le comportement de l'API varie selon le rôle de l'utilisateur connecté, plutôt que d'exposer un seul endpoint générique :
+
+- `GET /api/cfp/my-courses` → réservé aux formateurs, retourne les formations qu'ils enseignent.
+- `GET /api/cfp/my-register-courses` → réservé aux apprenants, retourne les formations auxquelles ils sont inscrits.
+- `GET /api/cfp/courses` reste commun et public (catalogue global).
+
+---
+
+## Schéma de données
+
+```
+users ──┬── role_user ──── roles
+        │
+        ├── formations (formateur_id)
+        │
+        └── inscriptions ──┬── formations
+                            └── certificats
+```
+
+| Table          | Colonnes clés                                        | Rôle                                                                    |
+| -------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `users`        | id, name, phone (unique), email (nullable), password | Compte unique par personne, identifié par téléphone                     |
+| `roles`        | id, name                                             | Référentiel des rôles (apprenant, formateur)                            |
+| `role_user`    | user_id, role_id                                     | Table pivot — permet le cumul de rôles                                  |
+| `formations`   | id, titre, description, formateur_id                 | Catalogue de formations                                                 |
+| `inscriptions` | id, user_id, formation_id, statut, date_inscription  | Lien apprenant ↔ formation, avec contrainte unique évitant les doublons |
+| `certificats`  | id, uuid (unique), inscription_id, date_emission     | Certificat généré à la fin d'une formation, vérifiable via son UUID     |
+
+### Tables par défaut Laravel retirées
+
+Les tables suivantes, générées par défaut par le starter Laravel, ont été retirées du projet car hors périmètre :
+
+- `password_reset_tokens` — aucune fonctionnalité de réinitialisation de mot de passe n'est demandée, et l'authentification principale se fait par téléphone plutôt que par email.
+- `sessions` — l'application est une API pure utilisant Sanctum (authentification par token), pas de session web.
+- `cache` — aucun besoin de cache en base pour ce périmètre.
+- `jobs` — aucun traitement asynchrone requis dans le périmètre obligatoire.
+
+Les drivers correspondants ont été simplifiés dans `.env` :
+
+```dotenv
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+```
+
+---
+
+## Installation et lancement
+
+### Prérequis
+
+- PHP >= 8.2
+- Composer
+- SQLite (généralement déjà inclus avec PHP)
+
+### Étapes
+
+1. **Cloner le dépôt et installer les dépendances**
+
+```bash
+git clone <url-du-depot>
+cd centre-formation-professionnelle
+composer install
+```
+
+2. **Configurer l'environnement**
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+3. **Créer la base de données SQLite**
+
+```bash
+touch database/database.sqlite
+```
+
+Vérifier que `.env` contient bien :
+
+```dotenv
+DB_CONNECTION=sqlite
+```
+
+4. **Lancer les migrations et le seeder**
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+Cela crée le schéma complet et génère des données de test (rôles, formateurs, formations, apprenants, inscriptions).
+
+5. **Lancer le serveur de développement**
+
+```bash
+php artisan serve
+```
+
+L'API est accessible sur `http://localhost:8000/api/cfp`.
+
+### Réinitialiser les données à tout moment
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+---
+
+## Endpoints de l'API
+
+Toutes les routes sont préfixées par `/api/cfp`.
+
+### Authentification (publiques)
+
+| Méthode | Route       | Description                                        |
+| ------- | ----------- | -------------------------------------------------- |
+| POST    | `/register` | Créer un compte (name, phone, password, role)      |
+| POST    | `/login`    | Se connecter (phone, password) → retourne un token |
+
+### Formations (publiques en lecture)
+
+| Méthode | Route               | Auth               | Description                 |
+| ------- | ------------------- | ------------------ | --------------------------- |
+| GET     | `/courses`          | Non                | Liste toutes les formations |
+| GET     | `/courses/{course}` | Non                | Détail d'une formation      |
+| POST    | `/courses`          | Oui (formateur)    | Créer une formation         |
+| PUT     | `/courses/{course}` | Oui (propriétaire) | Modifier une formation      |
+| DELETE  | `/courses/{course}` | Oui (propriétaire) | Supprimer une formation     |
+| GET     | `/my-courses`       | Oui (formateur)    | Mes formations enseignées   |
+
+### Inscriptions (authentifiées)
+
+| Méthode | Route                                  | Auth            | Description                                           |
+| ------- | -------------------------------------- | --------------- | ----------------------------------------------------- |
+| GET     | `/my-register-courses`                 | Oui (apprenant) | Mes formations suivies                                |
+| POST    | `/courses/{course}/inscription`        | Oui (apprenant) | S'inscrire à une formation                            |
+| POST    | `/inscriptions/{inscription}/terminer` | Oui             | Marquer une formation terminée → génère le certificat |
+
+### Certificats
+
+| Méthode | Route            | Auth    | Description                           |
+| ------- | ---------------- | ------- | ------------------------------------- |
+| GET     | `/verify/{uuid}` | **Non** | Vérification publique d'un certificat |
+
+### Compte
+
+| Méthode | Route     | Auth | Description                             |
+| ------- | --------- | ---- | --------------------------------------- |
+| GET     | `/user`   | Oui  | Informations du compte connecté + rôles |
+| POST    | `/logout` | Oui  | Déconnexion (révoque le token)          |
+
+---
+
+## Hypothèses prises sur les zones ambiguës
+
+Le sujet contient volontairement des zones sous-spécifiées. Voici les décisions prises et leur justification :
+
+1. **Catalogue de formations public** : le sujet ne précise pas si la liste des formations doit être accessible sans compte. Choix fait de la rendre publique (comme un catalogue e-commerce), car un visiteur doit pouvoir consulter l'offre avant de créer un compte. L'inscription, elle, reste protégée.
+
+2. **Un formateur ne peut pas s'inscrire à sa propre formation** : règle métier non explicitée mais logique, ajoutée par cohérence.
+
+3. **Écrans différenciés par rôle** : interprétés côté API comme des réponses différentes selon le rôle de l'utilisateur connecté (`my-courses` vs `my-register-courses`), plutôt que des vues front-end distinctes, le sujet demandant explicitement une API en priorité.
+
+4. **Génération du certificat** : déclenchée automatiquement dès qu'une inscription passe au statut `terminee`, plutôt que par une action manuelle séparée.
+
+---
+
+## Limites connues
+
+- Pas de gestion des tokens expirés/révoqués au-delà du comportement par défaut de Sanctum.
+- Pas de pagination sur les listes (`/courses`, `/my-courses`, etc.) — acceptable vu le volume de données du périmètre de test, mais à ajouter pour une mise en production.
+- Le mécanisme de parrainage (bonus) [préciser ici si implémenté ou non, et son état].
+- Pas de tests automatisés exhaustifs (voir section Tests) — le temps a été priorisé sur la modélisation et l'API elle-même.
+- Pas d'interface graphique — le périmètre obligatoire du sujet est l'API, l'interface étant mentionnée comme "si le temps le permet".
+
+---
+
+## Tests
+
+Pour vérifier le bon fonctionnement du cumul de rôles, des inscriptions et de la génération de certificats :
+
+```bash
+php artisan tinker
+```
+
+```php
+// Vérifier le cumul de rôles
+$user = \App\Models\User::factory()->create();
+$user->roles()->attach(\App\Models\Role::where('name', 'apprenant')->first());
+$user->roles()->attach(\App\Models\Role::where('name', 'formateur')->first());
+$user->fresh()->roles->pluck('name'); // ["apprenant", "formateur"]
+
+// Vérifier la génération de certificat
+$inscription = \App\Models\Inscription::factory()->terminee()->create();
+$inscription->certificat->uuid;
+```
+
+Des tests PHPUnit/Pest peuvent être lancés avec :
+
+```bash
+php artisan test
+```
+
+---
+
+## Historique de développement
+
+Le développement a suivi une approche incrémentale, avec une branche Git dédiée par fonctionnalité (`feature/database-schema`, `feature/eloquent-models`, `feature/auth-sanctum`, `feature/formations-api`, `feature/inscriptions-api`, `feature/certificat-verification`), chacune mergée dans `main` après validation manuelle via curl/Postman.

@@ -28,3 +28,8 @@ Thumbs.db
 /.blueprint
 /draft.yaml
 /road.txt
+
+# Fichier SQLite
+database/database.sqlite
+*.sqlite
+*.sqlite3
