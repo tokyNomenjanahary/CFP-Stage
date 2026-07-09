@@ -2,7 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Certificat;
 use App\Models\Formation;
+use App\Models\Inscription;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -14,10 +17,35 @@ class InscriptionFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => User::factory()->apprenant(),
             'formation_id' => Formation::factory(),
-            'statut' => fake()->randomElement(["en_cours","terminee"]),
-            'date_inscription' => fake()->dateTime(),
+            'statut' => 'en_cours',
+            'date_inscription' => now(),
         ];
+    }
+
+    /**
+     * S'assure que l'apprenant lié a bien le rôle "apprenant".
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Inscription $inscription) {
+            $role = Role::firstOrCreate(['name' => 'apprenant']);
+            $inscription->user->roles()->syncWithoutDetaching($role);
+        });
+    }
+
+    /**
+     * État : inscription terminée (avec certificat généré).
+     */
+    public function terminee(): static
+    {
+        return $this->state(fn() => ['statut' => 'terminee'])
+            ->afterCreating(function (Inscription $inscription) {
+                Certificat::create([
+                    'inscription_id' => $inscription->id,
+                    'date_emission' => now(),
+                ]);
+            });
     }
 }

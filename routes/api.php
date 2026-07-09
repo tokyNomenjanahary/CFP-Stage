@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\InscriptionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,5 +31,9 @@ Route::prefix('cfp')->group(function () {
         Route::post('/courses', [CourseController::class, 'store']);
         Route::put('/courses/{course}', [CourseController::class, 'update']);
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+
+        // inscriptions formation
+        Route::post('/courses/{course}/register', [InscriptionController::class, 'store']);
+        Route::post('/register/{inscription}/finish', [InscriptionController::class, 'finish']);
     });
 });

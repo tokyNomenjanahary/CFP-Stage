@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Formation;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,7 +23,7 @@ class FormationFactory extends Factory
 
     public function configure(): static
     {
-        return $this->afterCreating(function (\App\Models\Formation $formation) {
+        return $this->afterCreating(function (Formation $formation) {
             $role = Role::firstOrCreate(['name' => 'formateur']);
             $formation->formateur->roles()->syncWithoutDetaching($role);
         });
