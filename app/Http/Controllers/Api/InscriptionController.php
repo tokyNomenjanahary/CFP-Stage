@@ -54,11 +54,11 @@ class InscriptionController extends Controller
     {
         $user = $request->user();
 
-        // Seul l'apprenant concerné (ou le formateur de la formation) peut valider
+        // Seul le formateur concerné peut valider
         $estFormateur = $inscription->formation->formateur_id === $user->id;
-        $estApprenant = $inscription->user_id === $user->id;
+        // $estApprenant = $inscription->user_id === $user->id;
 
-        if (! $estFormateur && ! $estApprenant) {
+        if (! $estFormateur ) {
             return response()->json([
                 'message' => 'Vous n\'êtes pas autorisé à modifier cette inscription.',
             ], 403);

@@ -2,8 +2,6 @@
 
 API REST développée avec **Laravel 13**, permettant de centraliser des centres de formation professionnelle : gestion des comptes à rôles cumulables (apprenant / formateur), catalogue de formations, inscriptions, et génération de certificats numériques vérifiables publiquement.
 
-Ce projet a été réalisé dans le cadre d'un test technique de sélection de stagiaires Master 2.
-
 ---
 
 ## Sommaire
@@ -21,13 +19,12 @@ Ce projet a été réalisé dans le cadre d'un test technique de sélection de s
 
 ## Stack technique
 
-| Composant            | Choix                   | Justification                                                                                                                       |
-| -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Framework            | Laravel 13              | Framework PHP robuste, écosystème complet (Eloquent ORM, Sanctum, validation intégrée), rapide à mettre en place pour une API REST. |
-| Base de données      | SQLite                  | Zéro configuration, fichier unique, largement suffisant pour le périmètre du test (pas besoin de MySQL/PostgreSQL en local).        |
-| Authentification     | Laravel Sanctum         | Solution officielle Laravel pour l'authentification API par token, plus légère qu'OAuth2 (Passport) pour ce périmètre.              |
-| Génération de schéma | Laravel Shift Blueprint | Génère migrations, modèles et factories à partir d'un fichier YAML, accélère la mise en place initiale du schéma.                   |
-| Identifiants publics | UUID (`Str::uuid()`)    | Utilisés pour les certificats, afin d'éviter que leur identifiant soit devinable via un simple id auto-incrémenté.                  |
+| Composant            | Choix                   |
+| -------------------- | ----------------------- |
+| Framework            | Laravel 13              |
+| Base de données      | SQLite                  |
+| Authentification     | Laravel Sanctum         |
+| Génération de schéma | Laravel Shift Blueprint |
 
 ---
 
@@ -109,14 +106,7 @@ users ──┬── role_user ──── roles
 | `inscriptions` | id, user_id, formation_id, statut, date_inscription  | Lien apprenant ↔ formation, avec contrainte unique évitant les doublons |
 | `certificats`  | id, uuid (unique), inscription_id, date_emission     | Certificat généré à la fin d'une formation, vérifiable via son UUID     |
 
-### Tables par défaut Laravel retirées
 
-Les tables suivantes, générées par défaut par le starter Laravel, ont été retirées du projet car hors périmètre :
-
-- `password_reset_tokens` — aucune fonctionnalité de réinitialisation de mot de passe n'est demandée, et l'authentification principale se fait par téléphone plutôt que par email.
-- `sessions` — l'application est une API pure utilisant Sanctum (authentification par token), pas de session web.
-- `cache` — aucun besoin de cache en base pour ce périmètre.
-- `jobs` — aucun traitement asynchrone requis dans le périmètre obligatoire.
 
 Les drivers correspondants ont été simplifiés dans `.env` :
 
@@ -132,17 +122,17 @@ QUEUE_CONNECTION=sync
 
 ### Prérequis
 
-- PHP >= 8.2
+- PHP > 8.2
 - Composer
-- SQLite (généralement déjà inclus avec PHP)
+- SQLite
 
 ### Étapes
 
 1. **Cloner le dépôt et installer les dépendances**
 
 ```bash
-git clone <url-du-depot>
-cd centre-formation-professionnelle
+git clone https://github.com/tokyNomenjanahary/CFP-Stage.git
+cd CFP-Stage
 composer install
 ```
 
@@ -216,8 +206,8 @@ Toutes les routes sont préfixées par `/api/cfp`.
 | Méthode | Route                                  | Auth            | Description                                           |
 | ------- | -------------------------------------- | --------------- | ----------------------------------------------------- |
 | GET     | `/my-register-courses`                 | Oui (apprenant) | Mes formations suivies                                |
-| POST    | `/courses/{course}/inscription`        | Oui (apprenant) | S'inscrire à une formation                            |
-| POST    | `/inscriptions/{inscription}/terminer` | Oui             | Marquer une formation terminée → génère le certificat |
+| POST    | `/courses/{course}/register`           | Oui (apprenant) | S'inscrire à une formation                            |
+| POST    | `/register/{inscription}/finish`       | Oui (formateur) | Marquer une formation terminée → génère le certificat |
 
 ### Certificats
 
@@ -283,9 +273,3 @@ Des tests PHPUnit/Pest peuvent être lancés avec :
 ```bash
 php artisan test
 ```
-
----
-
-## Historique de développement
-
-Le développement a suivi une approche incrémentale, avec une branche Git dédiée par fonctionnalité (`feature/database-schema`, `feature/eloquent-models`, `feature/auth-sanctum`, `feature/formations-api`, `feature/inscriptions-api`, `feature/certificat-verification`), chacune mergée dans `main` après validation manuelle via curl/Postman.
