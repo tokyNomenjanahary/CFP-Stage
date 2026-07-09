@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CertificatController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\InscriptionController;
 use Illuminate\Http\Request;
@@ -16,6 +17,10 @@ Route::prefix('cfp')->group(function () {
     // --- Formations publiques ---
     Route::get('/courses', [CourseController::class, 'index']);
     Route::get('/courses/{course}', [CourseController::class, 'show']);
+
+    // --- Vérification de certificat publique uuid  ---
+    Route::get('/verify/{uuid}', [CertificatController::class, 'verify']);
+
 
     // Routes protégées
     Route::middleware('auth:sanctum')->group(function () {
