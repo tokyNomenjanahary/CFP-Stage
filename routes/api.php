@@ -39,6 +39,13 @@ Route::prefix('cfp')->group(function () {
 
         // inscriptions formation
         Route::post('/courses/{course}/register', [InscriptionController::class, 'store']);
-        Route::post('/register/{inscription}/finish', [InscriptionController::class, 'finish']);
+
+        // Inscriptions (côté formateur)
+        Route::get('/courses/{course}/register', [InscriptionController::class, 'courseInscriptions']);
+        Route::put('/registered/{inscription}/status', [InscriptionController::class, 'updateStatus']);
+
+
+        // Certificats (côté apprenant) — nouveau
+        Route::get('/my-certificates', [CertificatController::class, 'myCertificates']);
     });
 });

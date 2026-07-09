@@ -49,39 +49,54 @@ class InscriptionController extends Controller
         return response()->json($inscription, 201);
     }
 
-    // POST /api/cfp/register/{inscription}/finish
-    public function finish(Request $request, Inscription $inscription)
+
+    // GET /api/cfp/courses/{course}/inscriptions — formateur, propriétaire uniquement
+    public function courseInscriptions(Request $request, Formation $course)
     {
         $user = $request->user();
 
-        // Seul le formateur concerné peut valider
-        $estFormateur = $inscription->formation->formateur_id === $user->id;
-        // $estApprenant = $inscription->user_id === $user->id;
-
-        if (! $estFormateur ) {
+        if ($course->formateur_id !== $user->id) {
             return response()->json([
-                'message' => 'Vous n\'êtes pas autorisé à modifier cette inscription.',
+                'message' => 'Vous ne pouvez consulter que les inscriptions de vos propres formations.',
             ], 403);
         }
 
-        if ($inscription->statut === 'terminee') {
+        $inscriptions = $course->inscriptions()
+            ->with('user:id,name,phone')
+            ->with('certificat')
+            ->get();
+
+        return response()->json($inscriptions);
+    }
+
+    // PUT /api/cfp/registered/{inscription}/status — formateur propriétaire uniquement
+    public function updateStatus(Request $request, Inscription $inscription)
+    {
+        $user = $request->user();
+
+        if ($inscription->formation->formateur_id !== $user->id) {
             return response()->json([
-                'message' => 'Cette formation est déjà marquée comme terminée.',
-            ], 422);
+                'message' => 'Vous ne pouvez modifier que les inscriptions de vos propres formations.',
+            ], 403);
         }
 
-        $inscription->update(['statut' => 'terminee']);
-
-        // Génère automatiquement le certificat
-        $certificat = Certificat::create([
-            'inscription_id' => $inscription->id,
-            'date_emission' => now(),
+        $validated = $request->validate([
+            'statut' => 'required|in:en_cours,terminee',
         ]);
 
+        $inscription->update(['statut' => $validated['statut']]);
+
+        // Génère le certificat seulement s'il n'existe pas déjà
+        if ($validated['statut'] === 'terminee' && ! $inscription->certificat) {
+            Certificat::create([
+                'inscription_id' => $inscription->id,
+                'date_emission' => now(),
+            ]);
+        }
+
         return response()->json([
-            'message' => 'Formation marquée comme terminée.',
-            'inscription' => $inscription,
-            'certificat' => $certificat,
+            'message' => 'Statut mis à jour.',
+            'inscription' => $inscription->fresh('certificat'),
         ]);
     }
 }

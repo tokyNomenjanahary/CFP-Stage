@@ -204,7 +204,7 @@
         <tr>
             <td><span class="method post">POST</span></td>
             <td><code>/api/cfp/register/{inscription}/finish</code></td>
-            <td class="private">Authentifié</td>
+            <td class="private">Formateur</td>
             <td>Marquer une formation terminée → génère le certificat</td>
         </tr>
     </table>
