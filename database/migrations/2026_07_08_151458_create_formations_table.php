@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('titre');
             $table->text('description')->nullable();
             $table->foreignId('formateur_id')->constrained('users');
-            $table->foreignId('formateur_id_id');
             $table->timestamps();
         });
 

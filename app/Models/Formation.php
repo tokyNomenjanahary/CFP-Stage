@@ -42,11 +42,6 @@ class Formation extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function formateur(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function inscriptions(): HasMany
     {
         return $this->hasMany(Inscription::class);

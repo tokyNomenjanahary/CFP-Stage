@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -26,11 +27,34 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            'phone' => fake()->unique()->numerify('034#######'),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => static::$password ??= 'password', // hashé auto via le cast 'hashed'
             'remember_token' => Str::random(10),
         ];
+    }
+
+    /**
+     * Assigne le rôle apprenant après création.
+     */
+    public function apprenant(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $role = Role::firstOrCreate(['name' => 'apprenant']);
+            $user->roles()->syncWithoutDetaching($role);
+        });
+    }
+
+    /**
+     * Assigne le rôle formateur après création.
+     */
+    public function formateur(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $role = Role::firstOrCreate(['name' => 'formateur']);
+            $user->roles()->syncWithoutDetaching($role);
+        });
     }
 
     /**
@@ -38,7 +62,7 @@ class UserFactory extends Factory
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'email_verified_at' => null,
         ]);
     }
