@@ -1,51 +1,47 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CertificatController;
+use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\CourseController;
-use App\Http\Controllers\Api\InscriptionController;
+use App\Http\Controllers\Api\RegistrationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Toutes les routes auront le préfixe /api/cfp
+// All routes use the /api/cfp prefix
 Route::prefix('cfp')->group(function () {
 
-    // Routes publiques
+    // Public routes
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 
-    // --- Formations publiques ---
+    // Public courses
     Route::get('/courses', [CourseController::class, 'index']);
     Route::get('/courses/{course}', [CourseController::class, 'show']);
 
-    // --- Vérification de certificat publique uuid  ---
-    Route::get('/verify/{uuid}', [CertificatController::class, 'verify']);
+    // Public certificate verification by UUID
+    Route::get('/verify/{uuid}', [CertificateController::class, 'verify']);
 
-
-    // Routes protégées
+    // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user', function (Request $request) {
             return $request->user()->load('roles');
         });
         Route::post('/logout', [AuthController::class, 'logout']);
 
-        // Formations
+        // Courses
         Route::get('/my-courses', [CourseController::class, 'myCourses']);
-        Route::get('/my-register-courses', [CourseController::class, 'myRegisterCourses']);
+        Route::get('/my-enrolled-courses', [CourseController::class, 'myEnrolledCourses']);
 
         Route::post('/courses', [CourseController::class, 'store']);
         Route::put('/courses/{course}', [CourseController::class, 'update']);
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
 
-        // inscriptions formation
-        Route::post('/courses/{course}/register', [InscriptionController::class, 'store']);
+        // Course registrations
+        Route::post('/courses/{course}/register', [RegistrationController::class, 'store']);
+        Route::get('/courses/{course}/registrations', [RegistrationController::class, 'courseRegistrations']);
+        Route::put('/registrations/{registration}/status', [RegistrationController::class, 'updateStatus']);
 
-        // Inscriptions (côté formateur)
-        Route::get('/courses/{course}/register', [InscriptionController::class, 'courseInscriptions']);
-        Route::put('/registered/{inscription}/status', [InscriptionController::class, 'updateStatus']);
-
-
-        // Certificats (côté apprenant) — nouveau
-        Route::get('/my-certificates', [CertificatController::class, 'myCertificates']);
+        // Student certificates
+        Route::get('/my-certificates', [CertificateController::class, 'myCertificates']);
     });
 });

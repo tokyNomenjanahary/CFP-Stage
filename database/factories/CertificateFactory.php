@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Models\Inscription;
+use App\Models\Certificate;
+use App\Models\Registration;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class CertificatFactory extends Factory
+class CertificateFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -14,8 +15,8 @@ class CertificatFactory extends Factory
     {
         return [
             'uuid' => fake()->uuid(),
-            'inscription_id' => Inscription::factory(),
-            'date_emission' => fake()->dateTime(),
+            'registration_id' => Registration::factory(),
+            'issued_at' => fake()->dateTime(),
         ];
     }
 }

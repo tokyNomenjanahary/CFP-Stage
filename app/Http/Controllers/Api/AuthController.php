@@ -18,31 +18,30 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        // 1. Création de l'utilisateur
+        // 1. Create the user
         $user = User::create([
             'name' => $data['name'],
             'phone' => $data['phone'],
-            'password' => $data['password'], // hashé automatiquement grâce au cast
+            'password' => $data['password'],
         ]);
 
-        // 2. Attribution du rôle
+        // 2. Attach the role
         $role = Role::where('name', $data['role'])->firstOrFail();
         $user->roles()->attach($role);
 
-        // 3. Génération du token avec expiration (24h)
+        // 3. Generate token with expiration (24h)
         $token = $user->createTokenWithExpiration(
             'auth-token',
             ['*'],
             24
         )->plainTextToken;
 
-        // 4. Récupération des infos d'expiration
+        // 4. Retrieve expiration info
         $tokenModel = $user->tokens()->latest()->first();
 
-        // 5. Réponse
         return response()->json([
             'success' => true,
-            'message' => 'Inscription réussie',
+            'message' => 'Registration successful',
             'data' => [
                 'user' => $user->load('roles'),
                 'token' => $token,
@@ -59,26 +58,26 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'phone' => ['Identifiants incorrects.'],
+                'phone' => ['Invalid credentials.'],
             ]);
         }
 
-        // Révoquer les anciens tokens (optionnel - bonne pratique)
+        // Revoke old tokens (optional best practice)
         $user->tokens()->where('name', 'auth-token')->delete();
 
-        // Génération du nouveau token
+        // Generate new token
         $token = $user->createTokenWithExpiration(
             'auth-token',
             ['*'],
             24
         )->plainTextToken;
 
-        // Récupération de l'expiration
+        // Retrieve expiration
         $tokenModel = $user->tokens()->latest()->first();
 
         return response()->json([
             'success' => true,
-            'message' => 'Connexion réussie',
+            'message' => 'Login successful',
             'data' => [
                 'user' => $user->load('roles'),
                 'token' => $token,
@@ -91,31 +90,27 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            // Récupérer l'utilisateur authentifié
             $user = $request->user();
 
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Non authentifié'
+                    'message' => 'Unauthenticated',
                 ], 401);
             }
 
-            // Révoquer le token actuel
             $user->currentAccessToken()->delete();
-
 
             return response()->json([
                 'success' => true,
-                'message' => 'Déconnexion réussie'
+                'message' => 'Logout successful',
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la déconnexion',
-                'error' => $e->getMessage()
+                'message' => 'Error while logging out',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
-
 }

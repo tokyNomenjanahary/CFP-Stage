@@ -18,11 +18,11 @@ class RoleSeeder extends Seeder
         ]);
 
         Role::firstOrCreate([
-            'name' => 'formateur'
+            'name' => 'instructor'
         ]);
 
         Role::firstOrCreate([
-            'name' => 'apprenant'
+            'name' => 'student'
         ]);
     }
 }

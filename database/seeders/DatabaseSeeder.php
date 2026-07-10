@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Formation;
-use App\Models\Inscription;
+use App\Models\Course;
+use App\Models\Registration;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -21,23 +21,23 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
         ]);
 
-        // 3 formateurs avec 2-8 formations chacun
-        $formateurs = User::factory()->formateur()->count(3)->create();
-        $formateurs->each(function ($formateur) {
-            Formation::factory()->count(rand(2, 8))->create([
-                'formateur_id' => $formateur->id,
+        // 3 instructors with 2-8 courses each
+        $instructors = User::factory()->instructor()->count(3)->create();
+        $instructors->each(function ($instructor) {
+            Course::factory()->count(rand(2, 8))->create([
+                'instructor_id' => $instructor->id,
             ]);
         });
 
-        // 10 apprenants, chacun inscrit à 1-3 formations aléatoires
-        $apprenants = User::factory()->apprenant()->count(10)->create();
-        $formations = Formation::all();
+        // 10 students, each enrolled in 1-3 random courses
+        $students = User::factory()->student()->count(10)->create();
+        $courses = Course::all();
 
-        $apprenants->each(function ($apprenant) use ($formations) {
-            $formations->random(rand(1, 3))->each(function ($formation) use ($apprenant) {
-                Inscription::factory()->create([
-                    'user_id' => $apprenant->id,
-                    'formation_id' => $formation->id,
+        $students->each(function ($student) use ($courses) {
+            $courses->random(rand(1, 3))->each(function ($course) use ($student) {
+                Registration::factory()->create([
+                    'user_id' => $student->id,
+                    'course_id' => $course->id,
                 ]);
             });
         });

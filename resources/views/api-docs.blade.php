@@ -191,21 +191,21 @@
         </tr>
         <tr>
             <td><span class="method get">GET</span></td>
-            <td><code>/api/cfp/my-register-courses</code></td>
-            <td class="private">Apprenant</td>
+            <td><code>/api/cfp/my-enrolled-courses</code></td>
+            <td class="private">Student</td>
             <td>Mes formations suivies</td>
         </tr>
         <tr>
             <td><span class="method post">POST</span></td>
             <td><code>/api/cfp/courses/{course}/register</code></td>
-            <td class="private">Apprenant</td>
+            <td class="private">Student</td>
             <td>S'inscrire à une formation</td>
         </tr>
         <tr>
-            <td><span class="method post">POST</span></td>
-            <td><code>/api/cfp/register/{inscription}/finish</code></td>
-            <td class="private">Formateur</td>
-            <td>Marquer une formation terminée → génère le certificat</td>
+            <td><span class="method put">PUT</span></td>
+            <td><code>/api/cfp/registrations/{registration}/status</code></td>
+            <td class="private">Instructor</td>
+            <td>Marquer une inscription terminée → génère le certificat</td>
         </tr>
     </table>
 
@@ -227,10 +227,10 @@
 
     <h2>Mode d'emploi rapide</h2>
 
-    <p><strong>1. Créer un compte formateur</strong></p>
+    <p><strong>1. Créer un compte instructor</strong></p>
     <div class="example">curl -X POST {{ url('/api/cfp/register') }} \
         -H "Content-Type: application/json" -H "Accept: application/json" \
-        -d '{"name":"Marc","phone":"0341111111","password":"password123","role":"formateur"}'</div>
+        -d '{"name":"Marc","phone":"0341111111","password":"password123","role":"instructor"}'</div>
 
     <p><strong>2. Se connecter et récupérer un token</strong></p>
     <div class="example">curl -X POST {{ url('/api/cfp/login') }} \

@@ -3,104 +3,104 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Formation;
+use App\Models\Course;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
-    // GET /api/cfp/courses — public, liste toutes les formations
+    // GET /api/cfp/courses — public, list all courses
     public function index()
     {
-        $courses = Formation::with('formateur:id,name')
-            ->withCount('inscriptions')
+        $courses = Course::with('instructor:id,name')
+            ->withCount('registrations')
             ->get();
 
         return response()->json($courses);
     }
 
-    // GET /api/cfp/courses/{course} — public, détail
-    public function show(Formation $course)
+    // GET /api/cfp/courses/{course} — public, detail
+    public function show(Course $course)
     {
-        $course->load('formateur:id,name')
-            ->loadCount('inscriptions');
+        $course->load('instructor:id,name')
+            ->loadCount('registrations');
 
         return response()->json($course);
     }
 
-    // GET /api/cfp/my-courses — formateur uniquement
+    // GET /api/cfp/my-courses — instructor only
     public function myCourses(Request $request)
     {
         $user = $request->user();
 
-        if (! $user->hasRole('formateur')) {
+        if (! $user->hasRole('instructor')) {
             return response()->json([
-                'message' => 'Seul un formateur peut consulter ses formations.',
+                'message' => 'Only an instructor can view their courses.',
             ], 403);
         }
 
-        $courses = $user->formationsEnseignees()
-            ->withCount('inscriptions')
+        $courses = $user->taughtCourses()
+            ->withCount('registrations')
             ->get();
 
         return response()->json($courses);
     }
 
-    // GET /api/cfp/my-register-courses — apprenant uniquement
-    public function myRegisterCourses(Request $request)
+    // GET /api/cfp/my-enrolled-courses — student only
+    public function myEnrolledCourses(Request $request)
     {
         $user = $request->user();
 
-        if (! $user->hasRole('apprenant')) {
+        if (! $user->hasRole('student')) {
             return response()->json([
-                'message' => 'Seul un apprenant peut consulter ses inscriptions.',
+                'message' => 'Only a student can view enrolled courses.',
             ], 403);
         }
 
-        $courses = $user->formations()
-            ->with('formateur:id,name')
+        $courses = $user->courses()
+            ->with('instructor:id,name')
             ->get();
 
         return response()->json($courses);
     }
 
-    // POST /api/cfp/courses — formateur uniquement
+    // POST /api/cfp/courses — instructor only
     public function store(Request $request)
     {
         $user = $request->user();
 
-        if (! $user->hasRole('formateur')) {
+        if (! $user->hasRole('instructor')) {
             return response()->json([
-                'message' => 'Seul un formateur peut créer une formation.',
+                'message' => 'Only an instructor can create a course.',
             ], 403);
         }
 
         $validated = $request->validate([
-            'titre' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        $course = Formation::create([
-            'titre' => $validated['titre'],
+        $course = Course::create([
+            'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'formateur_id' => $user->id,
+            'instructor_id' => $user->id,
         ]);
 
         return response()->json($course, 201);
     }
 
-    // PUT /api/cfp/courses/{course} — propriétaire uniquement
-    public function update(Request $request, Formation $course)
+    // PUT /api/cfp/courses/{course} — owner only
+    public function update(Request $request, Course $course)
     {
         $user = $request->user();
 
-        if ($course->formateur_id !== $user->id) {
+        if ($course->instructor_id !== $user->id) {
             return response()->json([
-                'message' => 'Vous ne pouvez modifier que vos propres formations.',
+                'message' => 'You can only update your own courses.',
             ], 403);
         }
 
         $validated = $request->validate([
-            'titre' => 'sometimes|string|max:255',
+            'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
         ]);
 
@@ -109,19 +109,19 @@ class CourseController extends Controller
         return response()->json($course);
     }
 
-    // DELETE /api/cfp/courses/{course} — propriétaire uniquement
-    public function destroy(Request $request, Formation $course)
+    // DELETE /api/cfp/courses/{course} — owner only
+    public function destroy(Request $request, Course $course)
     {
         $user = $request->user();
 
-        if ($course->formateur_id !== $user->id) {
+        if ($course->instructor_id !== $user->id) {
             return response()->json([
-                'message' => 'Vous ne pouvez supprimer que vos propres formations.',
+                'message' => 'You can only delete your own courses.',
             ], 403);
         }
 
         $course->delete();
 
-        return response()->json(['message' => 'Formation supprimée.']);
+        return response()->json(['message' => 'Course deleted.']);
     }
 }

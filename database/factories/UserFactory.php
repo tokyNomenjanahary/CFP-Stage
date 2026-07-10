@@ -36,23 +36,23 @@ class UserFactory extends Factory
     }
 
     /**
-     * Assigne le rôle apprenant après création.
+     * Assign the student role after creation.
      */
-    public function apprenant(): static
+    public function student(): static
     {
         return $this->afterCreating(function (User $user) {
-            $role = Role::firstOrCreate(['name' => 'apprenant']);
+            $role = Role::firstOrCreate(['name' => 'student']);
             $user->roles()->syncWithoutDetaching($role);
         });
     }
 
     /**
-     * Assigne le rôle formateur après création.
+     * Assign the instructor role after creation.
      */
-    public function formateur(): static
+    public function instructor(): static
     {
         return $this->afterCreating(function (User $user) {
-            $role = Role::firstOrCreate(['name' => 'formateur']);
+            $role = Role::firstOrCreate(['name' => 'instructor']);
             $user->roles()->syncWithoutDetaching($role);
         });
     }

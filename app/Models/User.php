@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Course;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -42,18 +43,18 @@ class User extends Authenticatable
         return $this->roles->contains('name', $name);
     }
 
-    public function formations()
+    public function courses()
     {
-        return $this->belongsToMany(Formation::class, 'inscriptions')
-            ->withPivot('statut', 'date_inscription');
+        return $this->belongsToMany(Course::class, 'registrations')
+            ->withPivot('status', 'registered_at');
     }
 
-    public function formationsEnseignees()
+    public function taughtCourses()
     {
-        return $this->hasMany(Formation::class, 'formateur_id');
+        return $this->hasMany(Course::class, 'instructor_id');
     }
 
-    // Créer un token avec expiration
+    // Create a token with expiration
     public function createTokenWithExpiration(string $name, array $abilities = ['*'], int $hours = 24)
     {
         $expiresAt = Carbon::now()->addHours($hours);

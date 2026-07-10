@@ -187,8 +187,8 @@
             <input type="text" name="phone" placeholder="Téléphone" required>
             <input type="password" name="password" placeholder="Mot de passe" required>
             <select name="role" required>
-                <option value="apprenant">Apprenant</option>
-                <option value="formateur">Formateur</option>
+                <option value="student">Student</option>
+                <option value="instructor">Instructor</option>
             </select>
             <button type="submit">Créer un compte</button>
         </form>
@@ -211,7 +211,7 @@
     <section id="my-courses-section">
         <h2>Mes formations</h2>
         <form id="create-course-form">
-            <input type="text" name="titre" placeholder="Titre de la formation" required>
+            <input type="text" name="title" placeholder="Titre de la formation" required>
             <textarea name="description" placeholder="Description"></textarea>
             <button type="submit">Créer une formation</button>
         </form>
@@ -225,7 +225,7 @@
         <h2>Modifier la formation</h2>
         <form id="edit-course-form">
             <input type="hidden" name="id">
-            <input type="text" name="titre" placeholder="Titre" required>
+            <input type="text" name="title" placeholder="Titre" required>
             <textarea name="description" placeholder="Description"></textarea>
             <button type="submit">Enregistrer</button>
         </form>

@@ -1,6 +1,6 @@
 # Centre de Formation Professionnelle — API
 
-API REST développée avec **Laravel 13**, permettant de centraliser des centres de formation professionnelle : gestion des comptes à rôles cumulables (apprenant / formateur), catalogue de formations, inscriptions, et génération de certificats numériques vérifiables publiquement.
+API REST développée avec **Laravel 13**, permettant de centraliser des centres de formation professionnelle : gestion des comptes à rôles cumulables (student / instructor), catalogue de courses, registrations, et génération de certificates numériques vérifiables publiquement.
 
 ---
 
@@ -40,7 +40,7 @@ Le sujet interdit explicitement de modéliser les rôles avec de l'héritage de 
 users ⇄ role_user ⇄ roles
 ```
 
-Une table pivot `role_user` relie `users` et `roles`. Un utilisateur peut ainsi avoir 0, 1 ou plusieurs rôles simultanément (ex: apprenant **et** formateur), sans dupliquer sa structure de compte ni utiliser d'héritage.
+Une table pivot `role_user` relie `users` et `roles`. Un utilisateur peut ainsi avoir 0, 1 ou plusieurs rôles simultanément (ex: student **et** instructor), sans dupliquer sa structure de compte ni utiliser d'héritage.
 
 ```php
 // app/Models/User.php
@@ -72,16 +72,16 @@ La route `GET /api/cfp/verify/{uuid}` est volontairement placée **en dehors** d
 | -------------------------------------------------- | ------------------------------------------------ |
 | Catalogue de formations (liste + détail)           | Public                                           |
 | Vérification de certificat                         | Public                                           |
-| Création / modification / suppression de formation | Authentifié (formateur, propriétaire uniquement) |
-| Inscription à une formation                        | Authentifié (apprenant)                          |
+| Création / modification / suppression de formation | Authentifié (instructor, propriétaire uniquement) |
+| Inscription à une formation                        | Authentifié (student)                          |
 | Mes formations / mes inscriptions                  | Authentifié (rôle correspondant)                 |
 
 ### Écrans différenciés selon le rôle
 
 Le comportement de l'API varie selon le rôle de l'utilisateur connecté, plutôt que d'exposer un seul endpoint générique :
 
-- `GET /api/cfp/my-courses` → réservé aux formateurs, retourne les formations qu'ils enseignent.
-- `GET /api/cfp/my-register-courses` → réservé aux apprenants, retourne les formations auxquelles ils sont inscrits.
+- `GET /api/cfp/my-courses` → réservé aux instructors, retourne les courses qu'ils enseignent.
+- `GET /api/cfp/my-enrolled-courses` → réservé aux students, retourne les courses auxquelles ils sont inscrits.
 - `GET /api/cfp/courses` reste commun et public (catalogue global).
 
 ---
@@ -91,20 +91,20 @@ Le comportement de l'API varie selon le rôle de l'utilisateur connecté, plutô
 ```
 users ──┬── role_user ──── roles
         │
-        ├── formations (formateur_id)
+        ├── courses (instructor_id)
         │
-        └── inscriptions ──┬── formations
-                            └── certificats
+        └── registrations ──┬── courses
+                            └── certificates
 ```
 
 | Table          | Colonnes clés                                        | Rôle                                                                    |
 | -------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `users`        | id, name, phone (unique), email (nullable), password | Compte unique par personne, identifié par téléphone                     |
-| `roles`        | id, name                                             | Référentiel des rôles (apprenant, formateur)                            |
-| `role_user`    | user_id, role_id                                     | Table pivot — permet le cumul de rôles                                  |
-| `formations`   | id, titre, description, formateur_id                 | Catalogue de formations                                                 |
-| `inscriptions` | id, user_id, formation_id, statut, date_inscription  | Lien apprenant ↔ formation, avec contrainte unique évitant les doublons |
-| `certificats`  | id, uuid (unique), inscription_id, date_emission     | Certificat généré à la fin d'une formation, vérifiable via son UUID     |
+| `users`         | id, name, phone (unique), email (nullable), password | Compte unique par personne, identifié par téléphone                     |
+| `roles`         | id, name                                             | Référentiel des rôles (student, instructor)                            |
+| `role_user`     | user_id, role_id                                     | Table pivot — permet le cumul de rôles                                  |
+| `courses`       | id, title, description, instructor_id                | Catalogue de courses                                                   |
+| `registrations` | id, user_id, course_id, status, registered_at        | Lien student ↔ course, avec contrainte unique évitant les doublons     |
+| `certificates`  | id, uuid (unique), registration_id, issued_at        | Certificate généré à la fin d'une course, vérifiable via son UUID      |
 
 
 
@@ -205,9 +205,9 @@ Toutes les routes sont préfixées par `/api/cfp`.
 
 | Méthode | Route                                  | Auth            | Description                                           |
 | ------- | -------------------------------------- | --------------- | ----------------------------------------------------- |
-| GET     | `/my-register-courses`                 | Oui (apprenant) | Mes formations suivies                                |
-| POST    | `/courses/{course}/register`           | Oui (apprenant) | S'inscrire à une formation                            |
-| POST    | `/register/{inscription}/finish`       | Oui (formateur) | Marquer une formation terminée → génère le certificat |
+| GET     | `/my-enrolled-courses`                 | Oui (student) | Mes courses suivies                                   |
+| POST    | `/courses/{course}/register`           | Oui (student) | S'inscrire à une course                               |
+| PUT     | `/registrations/{registration}/status` | Oui (instructor) | Marquer une registration terminée → génère le certificate |
 
 ### Certificats
 
@@ -232,9 +232,9 @@ Le sujet contient volontairement des zones sous-spécifiées. Voici les décisio
 
 2. **Un formateur ne peut pas s'inscrire à sa propre formation** : règle métier non explicitée mais logique, ajoutée par cohérence.
 
-3. **Écrans différenciés par rôle** : interprétés côté API comme des réponses différentes selon le rôle de l'utilisateur connecté (`my-courses` vs `my-register-courses`), plutôt que des vues front-end distinctes, le sujet demandant explicitement une API en priorité.
+3. **Écrans différenciés par rôle** : interprétés côté API comme des réponses différentes selon le rôle de l'utilisateur connecté (`my-courses` vs `my-enrolled-courses`), plutôt que des vues front-end distinctes, le sujet demandant explicitement une API en priorité.
 
-4. **Génération du certificat** : déclenchée automatiquement dès qu'une inscription passe au statut `terminee`, plutôt que par une action manuelle séparée.
+4. **Génération du certificat** : déclenchée automatiquement dès qu'une registration passe au statut `completed`, plutôt que par une action manuelle séparée.
 
 ---
 
@@ -259,13 +259,13 @@ php artisan tinker
 ```php
 // Vérifier le cumul de rôles
 $user = \App\Models\User::factory()->create();
-$user->roles()->attach(\App\Models\Role::where('name', 'apprenant')->first());
-$user->roles()->attach(\App\Models\Role::where('name', 'formateur')->first());
-$user->fresh()->roles->pluck('name'); // ["apprenant", "formateur"]
+$user->roles()->attach(\App\Models\Role::where('name', 'student')->first());
+$user->roles()->attach(\App\Models\Role::where('name', 'instructor')->first());
+$user->fresh()->roles->pluck('name'); // ["student", "instructor"]
 
-// Vérifier la génération de certificat
-$inscription = \App\Models\Inscription::factory()->terminee()->create();
-$inscription->certificat->uuid;
+// Vérifier la génération de certificate
+$registration = \App\Models\Registration::factory()->completed()->create();
+$registration->certificate->uuid;
 ```
 
 Des tests PHPUnit/Pest peuvent être lancés avec :

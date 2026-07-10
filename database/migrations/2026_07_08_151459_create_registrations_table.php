@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('inscriptions', function (Blueprint $table) {
+        Schema::create('registrations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained();
-            $table->foreignId('formation_id')->constrained();
-            $table->enum('statut', ["en_cours","terminee"])->default('en_cours');
-            $table->timestamp('date_inscription');
+            $table->foreignId('course_id')->constrained('courses');
+            $table->enum('status', ["in_progress","completed"])->default('in_progress');
+            $table->timestamp('registered_at');
             $table->timestamps();
         });
 
@@ -30,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('inscriptions');
+        Schema::dropIfExists('registrations');
     }
 };
