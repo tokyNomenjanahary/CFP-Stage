@@ -4,6 +4,23 @@ API REST développée avec **Laravel 13**, permettant de centraliser des centres
 
 ---
 
+Cette application a été développée dans le cadre du test technique.
+
+## Accès rapide
+
+1. Installer le projet (voir la section **[Installation et lancement](#installation-et-lancement)**).
+2. Lancer le serveur Laravel.
+3. Ouvrir les pages suivantes :
+
+| URL | Description |
+|------|-------------|
+| `/` | Documentation rapide de l'API et instructions d'utilisation |
+| `/app` | Interface web minimale permettant de tester les principales fonctionnalités de l'API |
+
+> **Conseil :** Commencez par consulter la page d'accueil (`/`), puis utilisez `/app` pour tester l'application sans avoir à utiliser un client HTTP comme Postman.
+
+---
+
 ## Sommaire
 
 - [Stack technique](#stack-technique)
