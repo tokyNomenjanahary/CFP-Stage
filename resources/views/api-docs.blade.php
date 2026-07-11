@@ -93,6 +93,20 @@
             overflow-x: auto;
             font-size: 13px;
         }
+
+        .interface {
+            background: #ff2d20;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            width: 100%;
+            display: block;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -100,6 +114,7 @@
 
     <h1>API — Centre de Formation Professionnelle</h1>
     <p>Documentation des endpoints disponibles. Base URL : <code>{{ url('/api/cfp') }}</code></p>
+    <p><a href="{{ url('/app') }}" class="interface">→ Interface de test</a></p>
 
     <h2>Authentification</h2>
     <table>
@@ -113,7 +128,7 @@
             <td><span class="method post">POST</span></td>
             <td><code>/api/cfp/register</code></td>
             <td class="public">Public</td>
-            <td>Créer un compte (name, phone, password, role)</td>
+            <td>Créer un compte (name, phone, password, role, <code>referral_code</code> optionnel)</td>
         </tr>
         <tr>
             <td><span class="method post">POST</span></td>
@@ -207,6 +222,12 @@
             <td class="private">Instructor</td>
             <td>Marquer une inscription terminée → génère le certificat</td>
         </tr>
+        <tr>
+            <td><span class="method get">GET</span></td>
+            <td><code>/api/cfp/courses/{course}/registrations</code></td>
+            <td class="private">Instructor (propriétaire)</td>
+            <td>Liste des inscrits à une formation</td>
+        </tr>
     </table>
 
     <h2>Certificats</h2>
@@ -222,6 +243,38 @@
             <td><code>/api/cfp/verify/{uuid}</code></td>
             <td class="public">Public</td>
             <td>Vérification publique d'un certificat</td>
+        </tr>
+        <tr>
+            <td><span class="method get">GET</span></td>
+            <td><code>/api/cfp/my-certificates</code></td>
+            <td class="private">Student</td>
+            <td>Mes certificats obtenus</td>
+        </tr>
+    </table>
+
+    <h2>Parrainage</h2>
+    <p>Chaque utilisateur possède un <code>referral_code</code> unique. Un filleul peut l'utiliser à l'inscription.
+        Le parrain reçoit <strong>20 points de fidélité</strong> lors de la première inscription du filleul à une
+        formation.</p>
+    <table>
+        <tr>
+            <th>Méthode</th>
+            <th>Route</th>
+            <th>Accès</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td><span class="method get">GET</span></td>
+            <td><code>/api/cfp/user/points</code></td>
+            <td class="private">Authentifié</td>
+            <td>Points cumulés, code de parrainage, nombre total de filleuls</td>
+        </tr>
+        <tr>
+            <td><span class="method get">GET</span></td>
+            <td><code>/api/cfp/my-referrals</code></td>
+            <td class="private">Authentifié</td>
+            <td>Liste des filleuls : <code>reward_triggered_at</code>, <code>is_active</code> (récompense déclenchée)
+            </td>
         </tr>
     </table>
 
@@ -242,7 +295,23 @@
         -H "Authorization: Bearer VOTRE_TOKEN" \
         -H "Accept: application/json"</div>
 
-    <p><strong>4. Vérifier un certificat (sans authentification)</strong></p>
+    <p><strong>4. S'inscrire avec un code de parrainage</strong></p>
+    <div class="example">curl -X POST {{ url('/api/cfp/register') }} \
+        -H "Content-Type: application/json" -H "Accept: application/json" \
+        -d
+        '{"name":"Sophie","phone":"0342222222","password":"password123","role":"student","referral_code":"CODE_PARRAIN"}'
+    </div>
+
+    <p><strong>5. Consulter ses points et filleuls</strong></p>
+    <div class="example">curl {{ url('/api/cfp/user/points') }} \
+        -H "Authorization: Bearer VOTRE_TOKEN" \
+        -H "Accept: application/json"
+
+        curl {{ url('/api/cfp/my-referrals') }} \
+        -H "Authorization: Bearer VOTRE_TOKEN" \
+        -H "Accept: application/json"</div>
+
+    <p><strong>6. Vérifier un certificat (sans authentification)</strong></p>
     <div class="example">curl {{ url('/api/cfp/verify/UUID_DU_CERTIFICAT') }} \
         -H "Accept: application/json"</div>
 

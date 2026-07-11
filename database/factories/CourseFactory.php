@@ -2,8 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Course;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,16 +14,8 @@ class CourseFactory extends Factory
     {
         return [
             'title' => fake()->sentence(4),
-            'description' => fake()->paragraph(),
-            'instructor_id' => User::factory()->instructor(),
+            'description' => fake()->text(),
+            'instructor_id' => User::factory(),
         ];
-    }
-
-    public function configure(): static
-    {
-        return $this->afterCreating(function (Course $course) {
-            $role = Role::firstOrCreate(['name' => 'instructor']);
-            $course->instructor->roles()->syncWithoutDetaching($role);
-        });
     }
 }

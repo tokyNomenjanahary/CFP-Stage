@@ -5,11 +5,21 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\Referral;
 use App\Models\Registration;
+use App\Services\ReferralService;
 use Illuminate\Http\Request;
 
 class RegistrationController extends Controller
 {
+
+    protected ReferralService $referralService;
+
+    public function __construct(ReferralService $referralService)
+    {
+        $this->referralService = $referralService;
+    }
+
     // POST /api/cfp/courses/{course}/register
     public function store(Request $request, Course $course)
     {
@@ -39,6 +49,9 @@ class RegistrationController extends Controller
             ], 422);
         }
 
+        // Est-ce la toute première inscription de cet utilisateur, tous cours confondus ?
+        $isFirstRegistrationEver = ! Registration::where('user_id', $user->id)->exists();
+
         $registration = Registration::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
@@ -46,8 +59,34 @@ class RegistrationController extends Controller
             'registered_at' => now(),
         ]);
 
+        // ===== LOGIQUE DE RÉCOMPENSE =====
+        $rewardTriggered = false;
+
+        // Déclenche la récompense de parrainage si c'est la 1ère inscription du filleul
+        if ($isFirstRegistrationEver && $user->referred_by) {
+            // Utiliser le service
+            $rewardTriggered = $this->referralService->processReward($user->id);
+        }
+
+        $registration->load('user');
+
         return response()->json($registration, 201);
     }
+
+    // GET /api/cfp/user/points
+    public function myPoints(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'loyalty_points' => $user->loyalty_points,
+            'referral_code' => $user->referral_code,
+            'referrals_count' => Referral::where('referrer_id', $user->id)->count(),
+        ]);
+    }
+
 
     // GET /api/cfp/courses/{course}/registrations — instructor only
     public function courseRegistrations(Request $request, Course $course)

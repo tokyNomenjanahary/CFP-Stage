@@ -147,6 +147,25 @@
             color: #16653a;
         }
 
+        .badge.active {
+            background: #d1f4dd;
+            color: #16653a;
+        }
+
+        .badge.inactive {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .header-links {
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .header-links a {
+            color: #ff2d20;
+        }
+
         .back-link {
             color: #ff2d20;
             cursor: pointer;
@@ -154,12 +173,27 @@
             margin-bottom: 10px;
             display: inline-block;
         }
+
+        .interface {
+            background: #ff2d20;
+            color: #fff !important;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            width: 100%;
+            display: block;
+            text-align: center;
+        }
     </style>
 </head>
 
 <body>
 
     <h1>Centre de Formation Professionnelle</h1>
+    <p class="header-links"><a href="/" class="interface">← Documentation API</a></p>
     <div id="message"></div>
 
     <div id="user-bar" style="display:none;">
@@ -190,6 +224,7 @@
                 <option value="student">Student</option>
                 <option value="instructor">Instructor</option>
             </select>
+            <input type="text" name="referral_code" placeholder="Code de parrainage (optionnel)">
             <button type="submit">Créer un compte</button>
         </form>
     </section>
@@ -249,6 +284,20 @@
     <section id="my-certificates-section">
         <h2>Mes certificats</h2>
         <div id="my-certificates-list"></div>
+    </section>
+
+    <!-- MON COMPTE (authentifié) -->
+    <section id="profile-section">
+        <h2>Mon compte</h2>
+        <div id="profile-info"></div>
+    </section>
+
+    <!-- DASHBOARD DE PARRAINAGE (authentifié) -->
+    <section id="referral-section">
+        <h2>Système de Parrainage</h2>
+        <div id="referral-info"></div>
+        <h3>Mes filleuls</h3>
+        <div id="referral-list"></div>
     </section>
 
     <!-- VERIFICATION CERTIFICAT (public) -->

@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Certificate extends Model
+class Referral extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -17,9 +16,9 @@ class Certificate extends Model
      * @var array
      */
     protected $fillable = [
-        'uuid',
-        'registration_id',
-        'issued_at',
+        'referrer_id',
+        'referred_id',
+        'reward_triggered_at',
     ];
 
     /**
@@ -31,18 +30,19 @@ class Certificate extends Model
     {
         return [
             'id' => 'integer',
-            'registration_id' => 'integer',
-            'issued_at' => 'datetime',
+            'referrer_id' => 'integer',
+            'referred_id' => 'integer',
+            'reward_triggered_at' => 'timestamp',
         ];
     }
 
-    public function uniqueIds(): array
+    public function referrer(): BelongsTo
     {
-        return ['uuid'];
+        return $this->belongsTo(User::class);
     }
 
-    public function registration(): BelongsTo
+    public function referred(): BelongsTo
     {
-        return $this->belongsTo(Registration::class);
+        return $this->belongsTo(User::class);
     }
 }

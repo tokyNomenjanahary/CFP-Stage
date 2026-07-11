@@ -126,6 +126,11 @@ function renderApp() {
         );
     }
 
+    if (currentUser) {
+        addTab(tabs, "profile-section", "Mon compte", () => loadProfile());
+        addTab(tabs, "referral-section", "Parrainage", () => loadReferrals());
+    }
+
     addTab(tabs, "verify-section", "Vérifier un certificat", () => {});
 
     if (!currentUser) {
@@ -334,6 +339,32 @@ async function updateRegistrationStatus(registrationId, status, courseId, title)
     }
 }
 
+// --- MON COMPTE (authentifié) ---
+async function loadProfile() {
+    try {
+        const user = await apiCall("/user");
+        let pointsHtml = "";
+        try {
+            const points = await apiCall("/user/points");
+            pointsHtml = `
+                <p><small>Code de parrainage : <strong>${points.referral_code}</strong></small></p>
+                <p><small>Points de fidélité cumulés : <strong>${points.loyalty_points}</strong></small></p>
+            `;
+        } catch (e) {}
+
+        document.getElementById("profile-info").innerHTML = `
+            <div class="card">
+                <strong>${user.name}</strong><br>
+                <small>Téléphone : ${user.phone ?? "—"}</small><br>
+                <small>Rôles : ${user.roles?.map((r) => r.name).join(", ") ?? "—"}</small>
+                ${pointsHtml}
+            </div>
+        `;
+    } catch (err) {
+        showMessage(err.message, "error");
+    }
+}
+
 // --- MES INSCRIPTIONS (apprenant) ---
 async function loadMyInscriptions() {
     const courses = await apiCall("/my-enrolled-courses");
@@ -345,6 +376,10 @@ async function loadMyInscriptions() {
         <div class="card">
             <strong>${c.title}</strong><br>
             <small>Par ${c.instructor?.name ?? "—"}</small>
+            <span class="badge ${c.pivot?.status === "completed" ? "terminee" : "en_cours"}">
+                ${c.pivot?.status === "completed" ? "Terminée" : "En cours"}
+            </span>
+            ${c.pivot?.registered_at ? `<p><small>Inscrit le ${new Date(c.pivot.registered_at.replace(" ", "T")).toLocaleDateString()}</small></p>` : ""}
         </div>
     `,
             )
@@ -363,13 +398,74 @@ async function loadMyCertificates() {
             <strong>${c.registration.course.title}</strong><br>
             <small>Délivré le ${new Date(c.issued_at.replace(" ", "T")).toLocaleDateString()}</small><br>
             <small>UUID : ${c.uuid}</small>
+            <div class="card-actions">
+                <button class="secondary" onclick="verifyCertificate('${c.uuid}')">Vérifier ce certificat</button>
+            </div>
         </div>
     `,
             )
             .join("") || "<p>Vous n'avez pas encore de certificat.</p>";
 }
 
+// --- SYSTEME DE PARRAINAGE (authentifié) ---
+async function loadReferrals() {
+    try {
+        const points = await apiCall("/user/points");
+        const referrals = await apiCall("/my-referrals");
+
+        const rewardedCount = referrals.filter((r) => r.reward_triggered_at).length;
+        const pendingCount = referrals.length - rewardedCount;
+
+        const infoEl = document.getElementById("referral-info");
+        infoEl.innerHTML = `
+            <div class="card">
+                <strong>Points cumulés (parrainage)</strong>
+                <h3>${points.loyalty_points} points</h3>
+                <p><small>Partagez votre code : <strong>${points.referral_code}</strong></small></p>
+                <p><small>Total filleuls : ${points.referrals_count} · Récompensés : ${rewardedCount} · En attente : ${pendingCount}</small></p>
+            </div>
+        `;
+
+        const listEl = document.getElementById("referral-list");
+        listEl.innerHTML =
+            referrals
+                .map((r) => {
+                    const isActive = r.reward_triggered_at !== null;
+                    return `
+            <div class="card">
+                <strong>${r.referred.name}</strong>
+                <span class="badge ${isActive ? "active" : "inactive"}">
+                    ${isActive ? "Actif — récompense déclenchée" : "Inactif — en attente"}
+                </span>
+                <p><small>Parrainé le ${new Date(r.created_at.replace(" ", "T")).toLocaleDateString()}</small></p>
+                ${r.reward_triggered_at ? `<p><small>reward_triggered_at : ${new Date(r.reward_triggered_at).toLocaleString()}</small></p>` : "<p><small>reward_triggered_at : null</small></p>"}
+            </div>
+        `;
+                })
+                .join("") || "<p>Vous n'avez pas encore de filleuls.</p>";
+    } catch (err) {
+        showMessage(err.message, "error");
+    }
+}
+
 // --- VERIFICATION CERTIFICAT (public) ---
+async function verifyCertificate(uuid) {
+    showSection("verify-section");
+    document.querySelector("#verify-form input[name='uuid']").value = uuid;
+    const resultEl = document.getElementById("verify-result");
+    try {
+        const data = await apiCall(`/verify/${uuid}`);
+        resultEl.innerHTML = `
+            <div class="card">
+                ✅ Certificat valide<br>
+                <strong>${data.certificate.student}</strong> — ${data.certificate.course}<br>
+                <small>Délivré le ${new Date(data.certificate.issued_at * 1000).toLocaleDateString()}</small>
+            </div>`;
+    } catch (err) {
+        resultEl.innerHTML = `<div class="card">❌ ${err.message}</div>`;
+    }
+}
+
 document.getElementById("verify-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const uuid = new FormData(e.target).get("uuid");
@@ -381,7 +477,7 @@ document.getElementById("verify-form").addEventListener("submit", async (e) => {
             <div class="card">
                 ✅ Certificat valide<br>
                 <strong>${data.certificate.student}</strong> — ${data.certificate.course}<br>
-                <small>Délivré le ${new Date(data.certificate.issued_at.replace(" ", "T")).toLocaleDateString()}</small>
+                <small>Délivré le ${new Date(data.certificate.issued_at * 1000).toLocaleDateString()}</small>
             </div>`;
     } catch (err) {
         resultEl.innerHTML = `<div class="card">❌ ${err.message}</div>`;

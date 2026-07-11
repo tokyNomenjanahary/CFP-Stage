@@ -13,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'phone'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'referral_code', 'referred_by', 'loyalty_points'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -52,6 +52,23 @@ class User extends Authenticatable
     public function taughtCourses()
     {
         return $this->hasMany(Course::class, 'instructor_id');
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($user) {
+            $user->referral_code = (string) \Illuminate\Support\Str::random(8);
+        });
+    }
+
+    public function referredUsers()
+    {
+        return $this->hasMany(User::class, 'referred_by');
+    }
+
+    public function referrer()
+    {
+        return $this->belongsTo(User::class, 'referred_by');
     }
 
     // Create a token with expiration

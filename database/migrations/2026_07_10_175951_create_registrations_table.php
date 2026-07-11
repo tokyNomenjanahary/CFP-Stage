@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('registrations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained();
-            $table->foreignId('course_id')->constrained('courses');
+            $table->foreignId('course_id')->constrained();
             $table->enum('status', ["in_progress","completed"])->default('in_progress');
             $table->timestamp('registered_at');
             $table->timestamps();

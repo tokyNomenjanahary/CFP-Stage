@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RegistrationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -43,5 +44,9 @@ Route::prefix('cfp')->group(function () {
 
         // Student certificates
         Route::get('/my-certificates', [CertificateController::class, 'myCertificates']);
+
+        // voir qui j'ai parrainé
+        Route::get('/my-referrals', [ReferralController::class, 'index']);
+        Route::get('/user/points', [RegistrationController::class, 'myPoints']);
     });
 });

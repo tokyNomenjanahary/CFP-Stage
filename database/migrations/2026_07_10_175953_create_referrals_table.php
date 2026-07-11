@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
 
-        Schema::create('certificates', function (Blueprint $table) {
+        Schema::create('referrals', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid')->unique();
-            $table->foreignId('registration_id')->constrained('registrations');
-            $table->timestamp('issued_at');
+            $table->foreignId('referrer_id')->constrained('users');
+            $table->foreignId('referred_id')->constrained('users');
+            $table->timestamp('reward_triggered_at')->nullable();
             $table->timestamps();
         });
 
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('certificates');
+        Schema::dropIfExists('referrals');
     }
 };

@@ -93,18 +93,22 @@ users ──┬── role_user ──── roles
         │
         ├── courses (instructor_id)
         │
-        └── registrations ──┬── courses
-                            └── certificates
+        ├── registrations ──┬── courses
+        │                   └── certificates
+        │
+        ├── referrals (referrer_id) ── filleuls
+        └── referred_by ── parrain
 ```
 
 | Table          | Colonnes clés                                        | Rôle                                                                    |
 | -------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `users`         | id, name, phone (unique), email (nullable), password | Compte unique par personne, identifié par téléphone                     |
+| `users`         | id, name, phone (unique), email (nullable), password, `referral_code` (unique), `referred_by`, `loyalty_points` | Compte unique par personne, identifié par téléphone ; code de parrainage auto-généré à la création |
 | `roles`         | id, name                                             | Référentiel des rôles (student, instructor)                            |
 | `role_user`     | user_id, role_id                                     | Table pivot — permet le cumul de rôles                                  |
 | `courses`       | id, title, description, instructor_id                | Catalogue de courses                                                   |
 | `registrations` | id, user_id, course_id, status, registered_at        | Lien student ↔ course, avec contrainte unique évitant les doublons     |
 | `certificates`  | id, uuid (unique), registration_id, issued_at        | Certificate généré à la fin d'une course, vérifiable via son UUID      |
+| `referrals`     | id, referrer_id, referred_id, `reward_triggered_at` (nullable) | Lien parrain ↔ filleul ; `reward_triggered_at` renseigné quand la récompense est accordée |
 
 
 
@@ -171,6 +175,8 @@ php artisan serve
 
 L'API est accessible sur `http://localhost:8000/api/cfp`.
 
+Une **documentation interactive** est disponible sur `http://localhost:8000/` et une **interface de test** sur `http://localhost:8000/app`.
+
 ### Réinitialiser les données à tout moment
 
 ```bash
@@ -187,7 +193,7 @@ Toutes les routes sont préfixées par `/api/cfp`.
 
 | Méthode | Route       | Description                                        |
 | ------- | ----------- | -------------------------------------------------- |
-| POST    | `/register` | Créer un compte (name, phone, password, role)      |
+| POST    | `/register` | Créer un compte (name, phone, password, role, `referral_code` optionnel) |
 | POST    | `/login`    | Se connecter (phone, password) → retourne un token |
 
 ### Formations (publiques en lecture)
@@ -207,13 +213,28 @@ Toutes les routes sont préfixées par `/api/cfp`.
 | ------- | -------------------------------------- | --------------- | ----------------------------------------------------- |
 | GET     | `/my-enrolled-courses`                 | Oui (student) | Mes courses suivies                                   |
 | POST    | `/courses/{course}/register`           | Oui (student) | S'inscrire à une course                               |
+| GET     | `/courses/{course}/registrations`      | Oui (instructor) | Liste des inscrits à une formation (propriétaire)     |
 | PUT     | `/registrations/{registration}/status` | Oui (instructor) | Marquer une registration terminée → génère le certificate |
 
 ### Certificats
 
-| Méthode | Route            | Auth    | Description                           |
-| ------- | ---------------- | ------- | ------------------------------------- |
-| GET     | `/verify/{uuid}` | **Non** | Vérification publique d'un certificat |
+| Méthode | Route              | Auth            | Description                           |
+| ------- | ------------------ | --------------- | ------------------------------------- |
+| GET     | `/verify/{uuid}`   | **Non**         | Vérification publique d'un certificat |
+| GET     | `/my-certificates` | Oui (student)   | Mes certificats obtenus               |
+
+### Parrainage
+
+| Méthode | Route           | Auth | Description                                                                 |
+| ------- | --------------- | ---- | --------------------------------------------------------------------------- |
+| GET     | `/user/points`  | Oui  | Points de fidélité cumulés, code de parrainage, nombre total de filleuls    |
+| GET     | `/my-referrals` | Oui  | Liste des filleuls parrainés avec statut (`reward_triggered_at`, `is_active`) |
+
+**Fonctionnement :**
+
+1. Chaque utilisateur reçoit un `referral_code` unique à la création du compte.
+2. Lors de l'inscription (`POST /register`), un filleul peut fournir le code d'un parrain → une entrée est créée dans `referrals`.
+3. Quand le filleul effectue sa **première inscription à une formation** (`POST /courses/{course}/register`), le parrain reçoit **20 points de fidélité** et `reward_triggered_at` est renseigné sur la relation de parrainage.
 
 ### Compte
 
@@ -236,15 +257,17 @@ Le sujet contient volontairement des zones sous-spécifiées. Voici les décisio
 
 4. **Génération du certificat** : déclenchée automatiquement dès qu'une registration passe au statut `completed`, plutôt que par une action manuelle séparée.
 
+5. **Parrainage** : le parrain gagne 20 points à la première inscription d'un filleul à une formation. Les points ne sont pas encore dépensables (pas de catalogue de récompenses). Le champ `is_active` dans `/my-referrals` indique si la récompense a été déclenchée (`reward_triggered_at` renseigné).
+
 ---
 
 ## Limites connues
 
 - Pas de gestion des tokens expirés/révoqués au-delà du comportement par défaut de Sanctum.
 - Pas de pagination sur les listes (`/courses`, `/my-courses`, etc.) — acceptable vu le volume de données du périmètre de test, mais à ajouter pour une mise en production.
-- Le mécanisme de parrainage (bonus) [préciser ici si implémenté ou non, et son état].
-- Pas de tests automatisés exhaustifs (voir section Tests) — le temps a été priorisé sur la modélisation et l'API elle-même.
-- Pas d'interface graphique — le périmètre obligatoire du sujet est l'API, l'interface étant mentionnée comme "si le temps le permet".
+- Les points de fidélité ne sont pas encore utilisables (pas de système d'échange).
+- Pas de tests automatisés exhaustifs sur le parrainage (voir section Tests).
+- Interface de test disponible sur `/app` — couvre l'ensemble des endpoints, mais n'est pas destinée à la production.
 
 ---
 

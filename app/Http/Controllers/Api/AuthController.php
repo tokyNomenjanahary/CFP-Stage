@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Referral;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
@@ -18,16 +19,28 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        // 1. Create the user
+        $referrer = isset($data['referral_code'])
+            ? User::where('referral_code', $data['referral_code'])->first()
+            : null;
+
+        // Create the user
         $user = User::create([
             'name' => $data['name'],
             'phone' => $data['phone'],
             'password' => $data['password'],
+            'referred_by' => $referrer?->id,
         ]);
 
-        // 2. Attach the role
+        // Attach the role
         $role = Role::where('name', $data['role'])->firstOrFail();
         $user->roles()->attach($role);
+
+        if ($referrer) {
+            Referral::create([
+                'referrer_id' => $referrer->id,
+                'referred_id' => $user->id,
+            ]);
+        }
 
         // 3. Generate token with expiration (24h)
         $token = $user->createTokenWithExpiration(

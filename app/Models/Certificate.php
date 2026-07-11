@@ -32,7 +32,7 @@ class Certificate extends Model
         return [
             'id' => 'integer',
             'registration_id' => 'integer',
-            'issued_at' => 'datetime',
+            'issued_at' => 'timestamp',
         ];
     }
 

@@ -27,6 +27,7 @@ class RegisterRequest extends FormRequest
             'phone' => 'required|string|unique:users,phone',
             'password' => 'required|string|min:6',
             'role' => 'required|in:student,instructor',
+            'referral_code' => 'nullable|string|exists:users,referral_code',
         ];
     }
 

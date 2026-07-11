@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\Registration;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class CertificateFactory extends Factory
+class ReferralFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -13,9 +13,9 @@ class CertificateFactory extends Factory
     public function definition(): array
     {
         return [
-            'uuid' => fake()->uuid(),
-            'registration_id' => Registration::factory(),
-            'issued_at' => fake()->dateTime(),
+            'referrer_id' => User::factory(),
+            'referred_id' => User::factory(),
+            'reward_triggered_at' => fake()->dateTime(),
         ];
     }
 }

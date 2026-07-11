@@ -34,7 +34,7 @@ class Registration extends Model
             'id' => 'integer',
             'user_id' => 'integer',
             'course_id' => 'integer',
-            'registered_at' => 'datetime',
+            'registered_at' => 'timestamp',
         ];
     }
 
