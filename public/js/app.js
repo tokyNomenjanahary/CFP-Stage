@@ -396,7 +396,7 @@ async function loadMyCertificates() {
                 (c) => `
         <div class="card">
             <strong>${c.registration.course.title}</strong><br>
-            <small>Délivré le ${new Date(c.issued_at.replace(" ", "T")).toLocaleDateString()}</small><br>
+            <small>Délivré le ${new Date(c.issued_at * 1000).toLocaleDateString()}</small><br>
             <small>UUID : ${c.uuid}</small>
             <div class="card-actions">
                 <button class="secondary" onclick="verifyCertificate('${c.uuid}')">Vérifier ce certificat</button>
